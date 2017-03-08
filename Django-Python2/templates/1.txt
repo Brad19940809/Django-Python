@@ -1,0 +1,14 @@
+Django 1.7 之前， 用 python manage.py syncdb
+之后，用python manage.py makemigrations 和 python manage.py migrate
+
+after logging admin, user needed to be confirmed, and then go back to the
+terminal and input: python manage.py createsuperuser
+
+python -m django --version
+this command can check the version of Django
+
+1. creat an app called 'blog'
+2. add 'blog' into settings.py -> INSTALLED_APPS
+3. modify the models.py and add sevreal classes
+4. run makemigrationas and migrate
+5. modify admin.py
