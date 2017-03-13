@@ -1,0 +1,41 @@
+django-admin.py startproject DjangoPY3 #in command line mode
+python manage.py startapp brad         #in command line mode
+add 'brad' insettings.py -> INSTALLED_APPS
+python manage.py runserver             #in command line mode
+python manage.py migrate               #when the last one command prints the warning, input this command.
+python manage.py runserver 8080       #I need to add 8080 to solve the problem that default port 8000 has a bug to open
+python mange.py #to see the help
+ctrl+c  #quit the server
+python manage.py makemigrations # add the models.py's changes to migrate, then it will add a fie 0001_initial.py in my app's subfolder 'migrations'
+python manage.py shell # access to default database to operate.
+Brad.objects.create(title='mengqin',category='lover',content='I will always love her')
+Brad.objects.create(title='mama',category='my family',content='She is the best mother')
+>>> Brad.objects.all()
+>>> Brad.objects.get(id=1)
+>>> a=Brad.objects.get(id=1)
+>>> a.title
+'mengqin'
+>>> a.category
+'lover'
+>>> a.category='best lover'
+>>> a.category
+'best lover'
+>>> a.delete()
+(1, {'brad.Brad': 1})
+>>> Brad.objects.all()
+<QuerySet [<Brad: Brad object>]>
+>>> Brad.objects.filter(title='mengqin')
+<QuerySet [<Brad: Brad object>]>
+
+D:\Tech\Z_work\Python\DjangoPY3>python manage.py createsuperuser
+Username (leave blank to use 'brad'): root
+Email address: xiaoleluo@126.com
+Password:
+Password (again):
+Superuser created successfully.
+
+pip install bootstrap-admin
+add 'bootstrap-admin' into INSTALLED_APPS
+processing views.py
+processing urls.py
+
