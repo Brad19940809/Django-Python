@@ -96,3 +96,6 @@ ENV/
 # Pycharm configurations
 .idea
 */.idea
+
+# exclude migations
+*/*/migrations
