@@ -5,28 +5,34 @@ from django.template import loader
 from django.db.models import Q
 from django.http import JsonResponse
 from .forms import AlbumForm, SongForm, UserForm
+from django.contrib.auth import logout
+from django.contrib.auth import authenticate, login
 
 AUDIO_FILE_TYPES = ['wav', 'mp3', 'ogg']
+IMAGE_FILE_TYPES = ['png', 'jpg', 'jpeg']
 
 
 def index(request):
-    albums = Album.objects.all()
-    song_results = Song.objects.all()
-    query = request.GET.get("q")
-    if query:
-        albums = albums.filter(
-            Q(album_title__icontains=query) |
-            Q(artist__icontains=query)
-        ).distinct()
-        song_results = song_results.filter(
-            Q(song_title__icontains=query)
-        ).distinct()
-        return render(request, 'music/index.html', {
-            'albums': albums,
-            'songs': song_results,
-        })
+    if not request.user.is_authenticated():
+        return render(request, 'music/login.html')
     else:
-        return render(request, 'music/index.html', {'albums': albums})
+        albums = Album.objects.all()
+        song_results = Song.objects.all()
+        query = request.GET.get("q")
+        if query:
+            albums = albums.filter(
+                Q(album_title__icontains=query) |
+                Q(artist__icontains=query)
+            ).distinct()
+            song_results = song_results.filter(
+                Q(song_title__icontains=query)
+            ).distinct()
+            return render(request, 'music/index.html', {
+                'albums': albums,
+                'songs': song_results,
+            })
+        else:
+            return render(request, 'music/index.html', {'albums': albums})
 
 
 def detail(request, album_id):
@@ -38,19 +44,18 @@ def detail(request, album_id):
         return render(request, 'music/detail.html', {'album': album, 'user': user})
 
 
-def favorite(request, album_id):
-    album = get_object_or_404(Album, pk=album_id)
+def favorite(request, song_id):
+    song = get_object_or_404(Song, pk=song_id)
     try:
-        selected_song = album.song_set.get(pk=request.POST['song'])
+        if song.is_favorite:
+            song.is_favorite = False
+        else:
+            song.is_favorite = True
+        song.save()
     except (KeyError, Song.DoesNotExist):
-        return render(request, 'music/detail.html', {
-            'album': album,
-            'error_message': "You did not select a valid song",
-        })
+        return JsonResponse({'success': False})
     else:
-        selected_song.is_favorite = True
-        selected_song.save()
-        return render(request, 'music/detail.html', {'album': album})
+        return JsonResponse({'success': True})
 
 
 def songs(request, filter_by):
@@ -68,6 +73,32 @@ def songs(request, filter_by):
         'song_list': users_songs,
         'filter_by': filter_by,
     })
+
+
+def create_album(request):
+    if not request.user.is_authenticated():
+        return render(request, 'music/login.html')
+    else:
+        form = AlbumForm(request.POST or None, request.FILES or None)
+        if form.is_valid():
+            album = form.save(commit=False)
+            album.user = request.user
+            album.album_logo = request.FILES['album_logo']
+            file_type = album.album_logo.url.split('.')[-1]
+            file_type = file_type.lower()
+            if file_type not in IMAGE_FILE_TYPES:
+                context = {
+                    'album': album,
+                    'form': form,
+                    'error_message': 'Image file must be PNG, JPG, or JPEG',
+                }
+                return render(request, 'music/create_album.html', context)
+            album.save()
+            return render(request, 'music/detail.html', {'album': album})
+        context = {
+            "form": form,
+        }
+        return render(request, 'music/create_album.html', context)
 
 
 def delete_album(request, album_id):
@@ -131,3 +162,49 @@ def favorite_album(request, album_id):
         return JsonResponse({'success': False})
     else:
         return JsonResponse({'success': True})
+
+
+def logout_user(request):
+    logout(request)
+    form = UserForm(request.POST or None)
+    context = {
+        "form": form,
+    }
+    return render(request, 'music/login.html', context)
+
+
+def login_user(request):
+    if request.method == "POST":
+        username = request.POST['username']
+        password = request.POST['password']
+        user = authenticate(username=username, password=password)
+        if user is not None:
+            if user.is_active:
+                login(request, user)
+                albums = Album.objects.filter(user=request.user)
+                return render(request, 'music/index.html', {'albums': albums})
+            else:
+                return render(request, 'music/login.html', {'error_message': 'Your account has been disabled'})
+        else:
+            return render(request, 'music/login.html', {'error_message': 'Invalid login'})
+    return render(request, 'music/login.html')
+
+
+def register(request):
+    form = UserForm(request.POST or None)
+    if form.is_valid():
+        user = form.save(commit=False)
+        username = form.cleaned_data['username']
+        password = form.cleaned_data['password']
+        user.set_password(password)
+        user.save()
+        user = authenticate(username=username, password=password)
+        if user is not None:
+            if user.is_active:
+                login(request, user)
+                albums = Album.objects.filter(user=request.user)
+                return render(request, 'music/index.html', {'albums': albums})
+    context = {
+        "form": form,
+    }
+    return render(request, 'music/register.html', context)
